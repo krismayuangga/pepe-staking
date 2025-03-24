@@ -1,12 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
-require("@nomicfoundation/hardhat-verify");
 require('dotenv').config();
-
-const PRIVATE_KEY = process.env.PRIVATE_KEY || "0000000000000000000000000000000000000000000000000000000000000000";
-const BSC_TESTNET_URL = process.env.BSC_TESTNET_URL || "https://data-seed-prebsc-1-s1.binance.org:8545";
-const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || "";
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
-const MAINNET_URL = process.env.MAINNET_URL || "https://mainnet.infura.io/v3/your-api-key";
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -21,28 +14,24 @@ module.exports = {
   },
   networks: {
     bsc_testnet: {
-      url: process.env.BSC_TESTNET_URL || "https://bsc-testnet.publicnode.com",
+      url: process.env.BSC_TESTNET_URL || "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: process.env.BSC_TESTNET_PRIVATE_KEY ? [process.env.BSC_TESTNET_PRIVATE_KEY] : [],
       gasPrice: 10000000000 // 10 gwei
     },
-    mainnet: {
-      url: MAINNET_URL,
-      chainId: 1,
-      accounts: [process.env.PRIVATE_KEY],
-      gasPrice: "auto", // Use market gas price or set a specific value
-      // Don't deploy to mainnet without confirmation
-      verify: {
-        etherscan: {
-          apiKey: ETHERSCAN_API_KEY
-        }
-      }
+    bsc_mainnet: {
+      url: process.env.BSC_MAINNET_URL || "https://bsc-dataseed1.binance.org/",
+      chainId: 56,
+      accounts: process.env.BSC_MAINNET_PRIVATE_KEY ? [process.env.BSC_MAINNET_PRIVATE_KEY] : [],
+      gasPrice: "auto",
+      gasMultiplier: 1.1,  // Add 10% to estimated gas for safety
+      timeout: 60000       // Increase timeout to 60 seconds
     }
   },
   etherscan: {
     apiKey: {
       bscTestnet: process.env.BSCSCAN_API_KEY,
-      mainnet: process.env.ETHERSCAN_API_KEY
+      bsc: process.env.BSCSCAN_API_KEY,  // For BSC mainnet
     }
   },
   paths: {

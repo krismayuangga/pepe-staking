@@ -99,6 +99,32 @@
             margin-bottom: 1rem;
             font-weight: 500;
         }
+
+        /* Network Switcher Styles */
+        .network-switcher {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .network-switcher select {
+            appearance: none;
+            background-color: rgba(75, 45, 105, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding-right: 2rem;
+            cursor: pointer;
+        }
+        
+        .network-switcher::after {
+            content: '\f107';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -106,15 +132,29 @@
     <div class="glow glow-1"></div>
     <div class="glow glow-2"></div>
     
-    <!-- Updated Navigation with Links -->
+    <!-- Updated Navigation with Network Switcher -->
     <nav class="nav-bg fixed w-full z-50 border-b border-gray-800">
         <div class="container mx-auto px-4">
             <div class="flex flex-col md:flex-row justify-between items-center py-4">
                 <div class="flex items-center space-x-4 mb-4 md:mb-0">
                     <img src="https://s2.coinmarketcap.com/static/img/coins/64x64/24478.png" alt="PEPE" class="w-10 h-10">
-                    <h1 class="text-white text-2xl font-bold">PEPE Staking</h1>
+                    <div class="flex items-center">
+                        <h1 class="text-white text-2xl font-bold">PEPE Staking</h1>
+                        <span id="network-badge" class="ml-2 px-2 py-1 bg-yellow-500 text-white text-xs rounded-full">TESTNET</span>
+                    </div>
                 </div>
-                <!-- New Navigation Links -->
+                
+                <!-- New Network Switcher Dropdown -->
+                <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                    <div class="network-switcher">
+                        <select id="network-selector" class="rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="testnet">BSC Testnet</option>
+                            <option value="mainnet">BSC Mainnet</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Navigation Links -->
                 <div class="flex items-center space-x-8 mb-4 md:mb-0">
                     <a href="#" class="text-white hover:text-green-400 transition-colors">Home</a>
                     <a href="#" class="text-green-400 font-medium">Staking</a>
@@ -122,6 +162,7 @@
                     <a href="#" class="text-white hover:text-green-400 transition-colors">Analytics</a>
                     <a href="#" class="text-white hover:text-green-400 transition-colors">Docs</a>
                 </div>
+                
                 <div class="flex items-center space-x-4">
                     <button id="connectWallet" class="bg-white text-green-600 px-6 py-2 rounded-lg font-semibold hover:bg-green-50 transition-colors">
                         <i class="fas fa-wallet mr-2"></i>Connect Wallet
@@ -302,7 +343,111 @@
         <p id="notificationText"></p>
     </div>
 
+    <!-- Load config files in the correct order -->
     <script src="bsc-config.js"></script>
+    <script src="mainnet-config.js"></script>
+    <script src="network-switcher.js"></script>
     <script src="bsc-app.js"></script>
+
+    <!-- Additional script for initializing with current network -->
+    <script>
+        // Update the page title based on selected network
+        document.addEventListener('DOMContentLoaded', function() {
+            const network = networkSwitcher.getCurrentNetwork();
+            if (network === 'mainnet') {
+                document.title = 'PEPE Staking - BSC Mainnet';
+            } else {
+                document.title = 'PEPE Staking - BSC Testnet';
+            }
+            
+            // Initialize config based on selected network
+            window.CONFIG = networkSwitcher.getContractsConfig();
+            window.BSC_CONFIG = networkSwitcher.getNetworkConfig();
+            
+            // Log network information
+            console.log(`Active network: ${network.toUpperCase()}`);
+            console.log('Network config:', window.BSC_CONFIG);
+            console.log('Contracts config:', window.CONFIG);
+        });
+    </script>
+
+    <!-- Tambahkan script debug untuk mendukung pencatatan gas yang lebih baik -->
+    <script>
+        // Add gas debugging tools after main scripts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a debug div
+            const debugDiv = document.createElement('div');
+            debugDiv.id = 'gas-debug';
+            debugDiv.className = 'fixed bottom-16 right-4 bg-black text-white p-2 rounded-lg text-xs max-w-xs hidden';
+            debugDiv.innerHTML = 'Gas Tracking:<br>No transactions yet';
+            document.body.appendChild(debugDiv);
+            
+            // Debug button
+            const debugButton = document.createElement('button');
+            debugButton.innerHTML = '<i class="fas fa-tachometer-alt"></i>';
+            debugButton.className = 'fixed bottom-4 right-20 bg-gray-800 text-white p-2 rounded-full shadow-lg';
+            debugButton.title = 'Toggle Gas Debug';
+            debugButton.onclick = function() {
+                const debugDiv = document.getElementById('gas-debug');
+                if (debugDiv) {
+                    debugDiv.classList.toggle('hidden');
+                }
+            };
+            document.body.appendChild(debugButton);
+            
+            // Override stake/unstake functions to log gas
+            const originalEthSend = window.ethereum ? window.ethereum.request : null;
+            if (originalEthSend) {
+                window.ethereum.request = async function(args) {
+                    if (args.method === 'eth_sendTransaction' || args.method === 'eth_estimateGas') {
+                        console.log('Gas Tracking:', args.method, args.params[0].gas);
+                        const debugDiv = document.getElementById('gas-debug');
+                        if (debugDiv) {
+                            debugDiv.innerHTML = `Gas Tracking:<br>Method: ${args.method}<br>Gas: ${parseInt(args.params[0].gas, 16)}`;
+                        }
+                    }
+                    return originalEthSend.call(this, args);
+                };
+            }
+            
+            // Add refresh balance button
+            const balanceSection = document.querySelector('.dark-card');
+            if (balanceSection) {
+                const refreshBtn = document.createElement('button');
+                refreshBtn.className = 'absolute top-4 right-4 bg-blue-500 text-white p-1 rounded-full';
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                refreshBtn.title = 'Refresh Balances';
+                refreshBtn.onclick = async function() {
+                    if (typeof updateUI === 'function') {
+                        try {
+                            refreshBtn.disabled = true;
+                            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                            await updateUI();
+                            showNotification('Balances refreshed');
+                        } catch (e) {
+                            console.error('Error refreshing:', e);
+                        } finally {
+                            refreshBtn.disabled = false;
+                            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                        }
+                    }
+                };
+                balanceSection.style.position = 'relative';
+                balanceSection.appendChild(refreshBtn);
+            }
+        });
+        
+        // Override global provider to track gas
+        window.overrideEthereumProvider = function() {
+            if (!window.provider || !window.signer) return;
+            
+            const originalGetGasPrice = window.provider.getGasPrice;
+            window.provider.getGasPrice = async function() {
+                const price = await originalGetGasPrice.call(this);
+                console.log('Current gas price:', ethers.utils.formatUnits(price, 'gwei'), 'gwei');
+                return price;
+            };
+        };
+    </script>
 </body>
 </html>

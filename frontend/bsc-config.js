@@ -1,3 +1,11 @@
+// Di bagian atas file, tambahkan konfigurasi gas
+const GAS_CONFIG = {
+    defaultGasLimit: 100000, // Default gas limit
+    unstakeGasLimit: 100000, // Gas limit for unstake
+    unstakeEarlyGasLimit: 80000, // Gas limit for early unstake
+    stakeGasLimit: 120000 // Gas limit for stake
+};
+
 const BSC_CONFIG = {
     chainId: '0x61',
     chainName: 'BSC Testnet',
@@ -27,7 +35,7 @@ const CONFIG = {
         ]
     },
     pepeStaking: {
-        address: '0x89a90366293E8d71f56A8D9a1E3b7EC722A47434',
+        address: '0x808874626317e75Df7f495a3f3e7617B6c26073B',
         abi: [
             "function stake(uint256 poolId, uint256 amount)",
             "function unstake(uint256 stakeIndex)",
@@ -45,7 +53,6 @@ const CONFIG = {
             "function setPoolStatus(uint256 poolId, bool isActive)",
             "function setAdmin(address admin, bool status)",
             "function setRewardToken(address token)",
-            "function recoverTokens(address token, uint256 amount)",
             "function addUSDT(uint256 amount)",
             "function rewardToken() view returns (address)"
         ],
@@ -57,10 +64,16 @@ const CONFIG = {
             { name: "Pool 5", minPepe: "20,000,000", reward: "360" },
             { name: "Pool 6", minPepe: "100,000,000", reward: "3,000" },
             { name: "Pool 7", minPepe: "500", reward: "10" } // Tambahkan Pool 7 yang baru dibuat
-        ]
+        ],
+        gasLimit: {
+            stake: 120000,
+            unstake: 100000,
+            unstakeEarly: 80000
+        }
     }
 };
 
 // Export untuk digunakan di file lain
+window.GAS_CONFIG = GAS_CONFIG;
 window.BSC_CONFIG = BSC_CONFIG;
 window.CONFIG = CONFIG;

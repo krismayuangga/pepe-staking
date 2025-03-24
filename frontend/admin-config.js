@@ -20,7 +20,7 @@ const CONFIG = {
         ]
     },
     pepeStaking: {
-        address: '0x89a90366293E8d71f56A8D9a1E3b7EC722A47434',
+        address: '0xEE9687DEaA16cecAb36726eF58ce9bdf0f6FBf73',
         abi: [
             "function stake(uint256 poolId, uint256 amount)",
             "function unstake(uint256 stakeIndex)",
@@ -38,7 +38,6 @@ const CONFIG = {
             "function setPoolStatus(uint256 poolId, bool isActive)",
             "function setAdmin(address admin, bool status)",
             "function setRewardToken(address token)",
-            "function recoverTokens(address token, uint256 amount)",
             "function addUSDT(uint256 amount)",
             "function rewardToken() view returns (address)"
         ]

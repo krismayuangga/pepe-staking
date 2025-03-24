@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PEPE Staking DApp</title>
+    <title>Admin Dashboard - PEPE Staking</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -14,120 +14,520 @@
             background-color: #f3f4f6;
         }
     </style>
+    
+    <!-- PENTING: Load admin-config.js di head -->
+    <script src="admin-config.js"></script>
 </head>
-<body class="min-h-screen">
-    <nav class="bg-green-600 p-4">
+<body class="min-h-screen bg-gray-100">
+    <!-- Navbar -->
+    <nav class="bg-purple-900 p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center">
-                <h1 class="text-white text-2xl font-bold">PEPE Staking</h1>
-                <span class="ml-4 px-3 py-1 bg-green-500 text-white text-sm rounded-full">Localhost Network</span>
+            <div class="flex items-center space-x-4">
+                <img src="https://s2.coinmarketcap.com/static/img/coins/64x64/24478.png" alt="PEPE" class="w-10 h-10">
+                <div>
+                    <h1 class="text-white text-2xl font-bold">PEPE Admin</h1>
+                    <span class="text-purple-300 text-sm">BSC Testnet</span>
+                </div>
             </div>
-            <button id="connectWallet" class="bg-white text-green-600 px-4 py-2 rounded-lg font-semibold hover:bg-green-50 transition-colors">
-                <i class="fas fa-wallet mr-2"></i>Connect Wallet
-            </button>
-        </div>
-    </nav>
-
-    <!-- MetaMask Instructions Modal -->
-    <div id="metamaskModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-        <div class="bg-white p-8 rounded-2xl max-w-md w-full shadow-xl transform transition-all duration-200 scale-95 opacity-0">
-            <div class="text-center mb-6">
-                <i class="fas fa-wallet text-4xl text-green-600 mb-4"></i>
-                <h3 class="text-2xl font-bold text-gray-900">MetaMask Required</h3>
-            </div>
-            <p class="text-gray-600 mb-6 text-center">To use this dApp, you need to:</p>
-            <ol class="list-decimal list-inside space-y-3 mb-8 text-gray-700">
-                <li class="flex items-center">
-                    <span class="text-green-600 mr-2">1.</span>
-                    Install MetaMask browser extension
-                </li>
-                <li class="flex items-center">
-                    <span class="text-green-600 mr-2">2.</span>
-                    Create or import a wallet
-                </li>
-                <li class="flex items-center">
-                    <span class="text-green-600 mr-2">3.</span>
-                    Connect to Localhost network (Chain ID: 31337)
-                </li>
-            </ol>
-            <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 mt-6">
-                <a href="https://metamask.io" target="_blank" rel="noopener noreferrer"
-                   class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 hover:scale-105 transform transition-all duration-200 flex items-center justify-center font-semibold text-lg shadow-lg hover:shadow-xl">
-                    <i class="fas fa-arrow-up-right-from-square mr-2"></i>Get MetaMask
-                </a>
-                <button onclick="document.getElementById('metamaskModal').classList.add('hidden')" 
-                        class="px-8 py-3 border-2 border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium">
-                    Close
+            <div class="flex items-center space-x-4">
+                <!-- Tombol utama tetap ada -->
+                <button id="connectWallet" class="bg-purple-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-600">
+                    <i class="fas fa-wallet mr-2"></i>Connect Wallet
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <main class="container mx-auto px-4 py-8">
-        <div class="grid md:grid-cols-2 gap-8">
-            <!-- Staking Card -->
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-xl font-semibold mb-4">Stake PEPE Tokens</h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Amount to Stake</label>
-                        <div class="flex gap-2">
-                            <input type="number" id="stakeAmount" class="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="Enter amount">
-                            <button id="stakeButton" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                                <i class="fas fa-lock mr-2"></i>Stake
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <button id="unstakeButton" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-                            <i class="fas fa-unlock mr-2"></i>Unstake All
+                
+                <!-- Dropdown menu untuk tombol-tombol admin -->
+                <div class="relative">
+                    <button id="adminOptionsBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">
+                        <i class="fas fa-tools mr-2"></i>Admin Tools <i class="fas fa-caret-down ml-1"></i>
+                    </button>
+                    <div id="adminOptionsMenu" class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-1 hidden z-50">
+                        <!-- Add Admin option in dropdown menu -->
+                        <button id="addAdminBtn" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800">
+                            <i class="fas fa-user-plus mr-2"></i>Add Admin
+                        </button>
+                        <!-- Gabungkan Setup Contract dan Setup Reward Token -->
+                        <button id="setupTokenBtn" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800">
+                            <i class="fas fa-cog mr-2"></i>Setup Contract
+                        </button>
+                        <button id="refreshLockBtn" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh Lock Period
+                        </button>
+                        <hr class="my-1 border-gray-200">
+                        <button id="resetBtn" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600">
+                            <i class="fas fa-power-off mr-2"></i>Reset Connection
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
+    </nav>
 
-            <!-- Rewards Card -->
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-xl font-semibold mb-4">Your Rewards</h2>
-                <div class="space-y-4">
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <p class="text-sm text-gray-600">Available Rewards</p>
-                        <p id="rewardAmount" class="text-2xl font-bold text-green-600">0 USDT</p>
+    <main class="container mx-auto px-4 py-8">
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <p class="text-sm text-gray-500">Contract Balance</p>
+                <div class="flex items-baseline mt-1">
+                    <p id="contractUsdtBalance" class="text-2xl font-bold text-purple-600">0</p>
+                    <p class="ml-1 text-gray-500">USDT</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <p class="text-sm text-gray-500">Total Stakes</p>
+                <div class="flex items-baseline mt-1">
+                    <p id="totalStakes" class="text-2xl font-bold text-green-600">0</p>
+                    <p class="ml-1 text-gray-500">PEPE</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <p class="text-sm text-gray-500">Active Stakers</p>
+                <p id="activeStakers" class="text-2xl font-bold text-blue-600">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <p class="text-sm text-gray-500">Pending Rewards</p>
+                <div class="flex items-baseline mt-1">
+                    <p id="pendingRewards" class="text-2xl font-bold text-yellow-600">0</p>
+                    <p class="ml-1 text-gray-500">USDT</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Lock Period Status -->
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold mb-2">Current Lock Period</h3>
+                    <div class="flex items-baseline">
+                        <span id="stakingPeriod" class="text-2xl font-bold text-purple-600">Loading...</span>
                     </div>
-                    <button id="claimButton" class="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
-                        <i class="fas fa-coins mr-2"></i>Claim Rewards
+                </div>
+
+                <!-- Total Distributed Status -->
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold mb-2">Total Rewards Distributed</h3>
+                    <div class="flex items-baseline">
+                        <span id="totalDistributed" class="text-2xl font-bold text-green-600">0 USDT</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Stakes -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold">Active Stakes</h2>
+                <button id="addUsdtButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700">
+                    Add USDT to Contract
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Pool</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Address</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Amount</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Time Left</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activeStakesContainer" class="divide-y divide-gray-200">
+                        <!-- Will be populated by JavaScript -->
+                        <tr><td colspan="5" class="px-4 py-3 text-center text-gray-500">Loading stakes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pool Management -->
+        <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-bold mb-4">Pool Status</h2>
+                <div id="poolStats" class="grid grid-cols-2 gap-4">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-bold mb-4">Quick Actions</h2>
+                <div class="space-y-4">
+                    <button id="distributeRewardsButton" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+                        Distribute Available Rewards
+                    </button>
+                    <button id="emergencyPauseButton" class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
+                        Emergency Pause
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Balances Section -->
-        <div class="mt-8 bg-white p-6 rounded-xl shadow-lg">
-            <h2 class="text-xl font-semibold mb-4">Your Balances</h2>
-            <div class="grid md:grid-cols-3 gap-4">
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <p class="text-sm text-gray-600">PEPE Balance</p>
-                    <p id="pepeBalance" class="text-xl font-bold text-green-600">0 PEPE</p>
+        <!-- Lock Period Management -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-lg font-bold mb-4">Lock Period Management</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Global Quick Set -->
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold mb-2">Global Settings</h3>
+                    
+                    <!-- Add current lock period display here -->
+                    <div class="mb-3 pb-3 border-b border-gray-200">
+                        <p class="text-sm text-gray-500">Current Default Lock Period:</p>
+                        <div class="flex items-baseline">
+                            <span id="currentLockPeriod" class="text-lg font-bold text-purple-600">0</span>
+                            <span class="ml-2 text-gray-500">days</span>
+                        </div>
+                        <div class="mt-1 text-xs text-gray-500">
+                            <span id="lockPeriodInSeconds" class="font-mono">0 seconds</span>
+                        </div>
+                    </div>
+                    
+                    <select id="quickLockPeriod" class="w-full border rounded px-3 py-2 mb-2">
+                        <option value="300">5 Minutes (Testing)</option>
+                        <option value="3600">1 Hour</option>
+                        <option value="86400">1 Day</option>
+                        <option value="604800">7 Days</option>
+                        <option value="2592000">30 Days</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setQuickLockPeriod()" 
+                            class="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                            Set Default
+                        </button>
+                        <button onclick="applyToAllPools()" 
+                            class="bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">
+                            Apply to All
+                        </button>
+                    </div>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <p class="text-sm text-gray-600">Staked PEPE</p>
-                    <p id="stakedBalance" class="text-xl font-bold text-blue-600">0 PEPE</p>
+                
+                <!-- Per Pool Lock Period -->
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold mb-2">Pool-Specific Setting</h3>
+                    <div class="grid grid-cols-3 gap-2 mb-2">
+                        <div>
+                            <label class="text-xs text-gray-500">Pool</label>
+                            <select id="poolSelector" class="w-full border rounded px-3 py-2">
+                                <option value="0">Pool 1</option>
+                                <option value="1">Pool 2</option>
+                                <option value="2">Pool 3</option>
+                                <option value="3">Pool 4</option>
+                                <option value="4">Pool 5</option>
+                                <option value="5">Pool 6</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">Duration</label>
+                            <input type="number" id="poolLockPeriodDays" class="w-full border rounded px-3 py-2" placeholder="Days">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="setPoolLockPeriod()" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+                                Set
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <p class="text-sm text-gray-600">USDT Balance</p>
-                    <p id="usdtBalance" class="text-xl font-bold text-purple-600">0 USDT</p>
+            </div>
+            
+            <!-- Current Lock Periods Display -->
+            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div class="mb-3 pb-3 border-b border-gray-200">
+                    <p class="text-sm text-gray-500">Default Lock Period:</p>
+                    <div class="flex items-baseline">
+                        <span id="defaultLockPeriod" class="text-lg font-bold text-purple-600">0</span>
+                        <span class="ml-2 text-gray-500">seconds</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium mb-2">Pool-Specific Lock Periods:</h4>
+                    <div class="grid grid-cols-3 gap-4" id="poolLockPeriodsDisplay">
+                        <!-- Will be filled via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- Modal Add USDT - Tambahkan sebelum closing body tag -->
+<div id="addUsdtModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">Add USDT to Contract</h3>
+            <button onclick="closeUsdtModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">USDT Amount</label>
+            <input type="number" id="usdtAmount" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter USDT amount">
+        </div>
+        <div class="flex space-x-3">
+            <button id="confirmAddUsdt" class="flex-1 bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700">
+                Confirm
+            </button>
+            <button onclick="closeUsdtModal()" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-50">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+        <!-- Pool Management (NEW) -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-lg font-bold mb-4">Pool Management</h2>
+            
+            <!-- Create New Pool -->
+            <div class="p-4 bg-gray-50 rounded-lg mb-4">
+                <h3 class="font-semibold mb-2">Create New Pool</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                    <div>
+                        <label class="text-xs text-gray-500">Min PEPE</label>
+                        <input type="number" id="newPoolMinAmount" class="w-full border rounded px-3 py-2" placeholder="e.g. 1000000">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Max Holders</label>
+                        <input type="number" id="newPoolMaxHolders" class="w-full border rounded px-3 py-2" placeholder="e.g. 100">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Reward (USDT)</label>
+                        <input type="number" id="newPoolReward" class="w-full border rounded px-3 py-2" placeholder="e.g. 10">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Lock Period (days)</label>
+                        <input type="number" id="newPoolLockPeriod" class="w-full border rounded px-3 py-2" placeholder="e.g. 30">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="createNewPool()" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+                            Create
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Update Pool Rewards -->
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <h3 class="font-semibold mb-2">Update Pool Rewards</h3>
+                <div class="grid grid-cols-3 gap-3 mb-3">
+                    <div>
+                        <label class="text-xs text-gray-500">Select Pool</label>
+                        <select id="updatePoolSelector" class="w-full border rounded px-3 py-2">
+                            <!-- Filled via JavaScript -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">New Reward (USDT)</label>
+                        <input type="number" id="updatePoolReward" class="w-full border rounded px-3 py-2" placeholder="e.g. 10">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="updatePoolReward()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                            Update
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Notification -->
-    <div id="notification" class="fixed bottom-4 right-4 hidden bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
+    <!-- Notifications -->
+    <div id="notification" class="hidden fixed bottom-4 right-4 max-w-md bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
         <p id="notificationText"></p>
     </div>
 
-    <script src="app.js"></script>
-    <script src="admin-config.js"></script>
+    <!-- Load admin-app.js sebelum script debugging -->
     <script src="admin-app.js"></script>
+    
+    <!-- Script debugging dengan perbaikan yang ditingkatkan -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM fully loaded and parsed");
+        
+        // Tambahkan tombol reset (untuk debugging)
+        const navContainer = document.querySelector('nav .container');
+        if (navContainer) {
+            const resetButton = document.createElement('button');
+            resetButton.className = 'ml-4 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700';
+            resetButton.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Reset Connection';
+            resetButton.onclick = function() {
+                console.log("Resetting connection...");
+                localStorage.clear();
+                window.location.reload();
+            };
+            navContainer.appendChild(resetButton);
+        }
+        
+        const connectWalletBtn = document.getElementById('connectWallet');
+        if (connectWalletBtn) {
+            console.log("Connect wallet button found");
+            
+            // Setup tombol connectWallet dengan perbaikan
+            connectWalletBtn.onclick = async function() {
+                console.log("Connect wallet button clicked");
+                
+                try {
+                    // Check MetaMask
+                    if (typeof window.ethereum !== 'undefined') {
+                        console.log("MetaMask terdeteksi");
+                        
+                        // Tambahkan delay untuk memberikan waktu UI memproses klik
+                        setTimeout(async () => {
+                            try {
+                                // Koneksi wallet dengan provider
+                                console.log("Requesting accounts...");
+                                await window.ethereum.request({
+                                    method: 'eth_requestAccounts'
+                                });
+                                
+                                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                                const signer = provider.getSigner();
+                                const address = await signer.getAddress();
+                                console.log("Wallet connected:", address);
+                                
+                                // Inisialisasi kontrak langsung di sini
+                                console.log("Initializing contracts...");
+                                const stakingContract = new ethers.Contract(
+                                    CONFIG.pepeStaking.address,
+                                    CONFIG.pepeStaking.abi,
+                                    signer
+                                );
+                                
+                                // Tampilkan alamat di tombol connect
+                                connectWalletBtn.innerHTML = `<i class="fas fa-wallet mr-2"></i>${address.slice(0, 6)}...${address.slice(-4)}`;
+                                connectWalletBtn.classList.remove('bg-purple-500', 'hover:bg-purple-600');
+                                connectWalletBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                                
+                                // Panggil juga fungsi connectWallet jika tersedia
+                                if (typeof window.connectWallet === 'function') {
+                                    await window.connectWallet();
+                                } else {
+                                    console.warn("Function connectWallet not available");
+                                }
+                                
+                                // Setup button untuk add USDT
+                                const addUsdtButton = document.getElementById('addUsdtButton');
+                                if (addUsdtButton) {
+                                    addUsdtButton.addEventListener('click', async () => {
+                                        try {
+                                            const amount = prompt("Masukkan jumlah USDT yang akan ditambahkan:");
+                                            if (!amount) return;
+                                            
+                                            const usdtAmount = ethers.utils.parseEther(amount);
+                                            const usdtContract = new ethers.Contract(
+                                                CONFIG.dummyUSDT.address,
+                                                CONFIG.dummyUSDT.abi,
+                                                signer
+                                            );
+                                            
+                                            // Approve first
+                                            const approveTx = await usdtContract.approve(stakingContract.address, usdtAmount);
+                                            await approveTx.wait();
+                                            
+                                            // Add USDT to contract
+                                            const tx = await stakingContract.addUSDT(usdtAmount);
+                                            await tx.wait();
+                                            
+                                            alert('Berhasil menambahkan USDT ke kontrak!');
+                                            location.reload();
+                                        } catch (error) {
+                                            console.error('Error adding USDT:', error);
+                                            alert('Error: ' + error.message);
+                                        }
+                                    });
+                                }
+                                
+                                // Setup button untuk setup reward token
+                                const setupButton = document.getElementById('setupButton');
+                                if (setupButton) {
+                                    setupButton.addEventListener('click', async () => {
+                                        try {
+                                            const tx = await stakingContract.setRewardToken(CONFIG.dummyUSDT.address);
+                                            await tx.wait();
+                                            alert('Berhasil mengatur USDT sebagai reward token!');
+                                            location.reload();
+                                        } catch (error) {
+                                            console.error('Error setting reward token:', error);
+                                            alert('Error: ' + error.message);
+                                        }
+                                    });
+                                }
+                                
+                            } catch (error) {
+                                console.error("Error connecting wallet:", error);
+                                alert("Error connecting wallet: " + error.message);
+                            }
+                        }, 100);
+                        
+                    } else {
+                        console.error("MetaMask tidak terdeteksi!");
+                        alert("MetaMask tidak terdeteksi! Silakan install MetaMask terlebih dahulu.");
+                    }
+                } catch (err) {
+                    console.error("Connection error:", err);
+                    alert("Connection error: " + err.message);
+                }
+            };
+            
+            // Auto connect if previously connected
+            if (window.ethereum && window.ethereum.selectedAddress) {
+                console.log("Wallet already connected, trying auto-connect");
+                connectWalletBtn.click();
+            }
+            
+        } else {
+            console.error("Connect wallet button not found!");
+        }
+
+        // Pastikan placeholder elemen dibuat (HANYA UNTUK ELEMEN YANG BENAR-BENAR TIDAK ADA DI HTML)
+        ['poolLockPeriodsDisplay'].forEach(id => {
+            if (!document.getElementById(id)) {
+                console.warn(`Creating placeholder for missing element: #${id}`);
+                const placeholder = document.createElement('span');
+                placeholder.id = id;
+                placeholder.style.display = 'none';
+                document.body.appendChild(placeholder);
+            }
+        });
+    });
+    </script>
+    
+    <!-- Tambahkan JavaScript untuk dropdown di bagian bawah file sebelum </body> -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminOptionsBtn = document.getElementById('adminOptionsBtn');
+            const adminOptionsMenu = document.getElementById('adminOptionsMenu');
+            
+            // Toggle dropdown menu
+            adminOptionsBtn.addEventListener('click', function() {
+                adminOptionsMenu.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!adminOptionsBtn.contains(event.target) && !adminOptionsMenu.contains(event.target)) {
+                    adminOptionsMenu.classList.add('hidden');
+                }
+            });
+            
+            // Setup function assignments
+            document.getElementById('addAdminBtn').addEventListener('click', function() {
+                addNewAdmin();
+                adminOptionsMenu.classList.add('hidden');
+            });
+            
+            document.getElementById('setupTokenBtn').addEventListener('click', function() {
+                setupInitialConfig();
+                adminOptionsMenu.classList.add('hidden');
+            });
+            
+            document.getElementById('refreshLockBtn').addEventListener('click', function() {
+                updateStakingPeriodDisplay();
+                adminOptionsMenu.classList.add('hidden');
+            });
+            
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                console.log("Resetting connection...");
+                localStorage.clear();
+                window.location.reload();
+                adminOptionsMenu.classList.add('hidden');
+            });
+        });
+    </script>
 </body>
 </html>

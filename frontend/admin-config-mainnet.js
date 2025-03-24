@@ -1,4 +1,3 @@
-// BSC Mainnet Configuration
 const MAINNET_CONFIG = {
     BSC_CONFIG: {
         chainId: '0x38',  // BSC Mainnet chainId
@@ -12,16 +11,7 @@ const MAINNET_CONFIG = {
         blockExplorerUrls: ['https://bscscan.com']
     },
     pepeToken: {
-        address: '0x0c5779d8b1a606b0de41c14bee64f3bb1169c71b',
-        abi: [
-            "function balanceOf(address) view returns (uint256)",
-            "function approve(address spender, uint256 amount) returns (bool)",
-            "function transfer(address to, uint256 amount) returns (bool)",
-            "function decimals() view returns (uint8)"
-        ]
-    },
-    usdt: {  // Changed from dummyUSDT for mainnet
-        address: '0x55d398326f99059fF775485246999027B3197955',
+        address: '0x0c5779d8b1a606b0de41c14bee64f3bb1169c71b',  // Mainnet PEPE address
         abi: [
             "function balanceOf(address) view returns (uint256)",
             "function approve(address spender, uint256 amount) returns (bool)",
@@ -30,7 +20,7 @@ const MAINNET_CONFIG = {
         ]
     },
     pepeStaking: {
-        address: '0x02f6F80bEc411e65A2008E7D2E3fC1C6ff1A9463',
+        address: '0x02f6F80bEc411e65A2008E7D2E3fC1C6ff1A9463',  // Mainnet staking address
         abi: [
             "function stake(uint256 poolId, uint256 amount)",
             "function unstake(uint256 stakeIndex)",
@@ -50,34 +40,20 @@ const MAINNET_CONFIG = {
             "function setRewardToken(address token)",
             "function addUSDT(uint256 amount)",
             "function rewardToken() view returns (address)"
-        ],
-        pools: [
-            { name: "Pool 1", minPepe: "1,000,000", reward: "7.5" },
-            { name: "Pool 2", minPepe: "2,000,000", reward: "15" },
-            { name: "Pool 3", minPepe: "5,000,000", reward: "45" },
-            { name: "Pool 4", minPepe: "10,000,000", reward: "150" },
-            { name: "Pool 5", minPepe: "20,000,000", reward: "360" },
-            { name: "Pool 6", minPepe: "100,000,000", reward: "3,000" }
-        ],
-        gasLimit: {
-            stake: 120000,
-            unstake: 100000,
-            unstakeEarly: 80000
-        }
+        ]
     },
-    NETWORK: {
-        chainId: '0x38',
-        chainName: 'BSC Mainnet',
-        nativeCurrency: {
-            name: 'BNB',
-            symbol: 'BNB',
-            decimals: 18
-        },
-        rpcUrls: ['https://bsc.publicnode.com'],
-        blockExplorerUrls: ['https://bscscan.com']
+    usdt: {  // Ubah dari dummyUSDT ke usdt untuk mainnet
+        address: '0x55d398326f99059fF775485246999027B3197955',  // BSC Mainnet USDT
+        abi: [
+            "function balanceOf(address) view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function approve(address spender, uint256 amount) returns (bool)",
+            "function transfer(address to, uint256 amount) returns (bool)"
+            // Hapus mint karena USDT asli tidak memiliki fungsi ini
+        ]
     }
 };
 
-// Export for use in other files
-window.MAINNET_CONFIG = MAINNET_CONFIG;
+// Export CONFIG untuk digunakan di file lain
+window.MAINNET_CONFIG = MAINNET_CONFIG;  // Nama variabel harus MAINNET_CONFIG
 window.BSC_MAINNET_CONFIG = MAINNET_CONFIG.BSC_CONFIG;

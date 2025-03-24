@@ -1,136 +1,97 @@
-// Network switcher functionality for PEPE Staking dApp
-let currentNetwork = 'testnet'; // Default to testnet initially
-
-// Store network configuration objects
-const networks = {
-    mainnet: {
-        configUrl: 'mainnet-config.js',
-        name: 'BSC Mainnet',
-        chainId: '0x38',
-        cssClass: 'mainnet',
-        label: 'MAINNET'
-    },
-    testnet: {
-        configUrl: 'bsc-config.js',
-        name: 'BSC Testnet',
-        chainId: '0x61',
-        cssClass: 'testnet',
-        label: 'TESTNET'
-    }
-};
-
-// Function to switch networks
-async function switchNetwork(networkName) {
-    if (!networks[networkName]) return false;
-    
-    try {
-        // Update UI
-        const networkLabel = document.getElementById('networkLabel');
-        if (networkLabel) {
-            networkLabel.textContent = networks[networkName].label;
-            networkLabel.className = `text-xs font-bold ml-2 network-badge ${networks[networkName].cssClass}`;
-        }
+// Network Switcher Logic
+class NetworkSwitcher {
+    constructor() {
+        // Kunci untuk menyimpan preferensi network di localStorage
+        this.STORAGE_KEY = 'pepe_staking_network';
         
-        // Store current network selection
-        localStorage.setItem('pepeStakingNetwork', networkName);
-        currentNetwork = networkName;
+        // Default network
+        this.currentNetwork = 'testnet';
         
-        // Add/remove network-specific classes from body
-        document.body.classList.remove('network-testnet', 'network-mainnet');
-        document.body.classList.add(`network-${networkName}`);
+        // Inisialisasi dari localStorage
+        this.initFromStorage();
         
-        // Update network name display
-        const networkName_el = document.getElementById('networkName');
-        if (networkName_el) {
-            networkName_el.textContent = networks[networkName].name;
-        }
-        
-        // Reload configuration
-        await loadNetworkConfig(networkName);
-        
-        // Reinitialize contracts with new config
-        if (typeof window.initializeContracts === 'function') {
-            await window.initializeContracts();
-        } else if (typeof window.connectWallet === 'function' && window.ethereum && window.ethereum.selectedAddress) {
-            // Re-connect wallet to refresh with new network config
-            await window.connectWallet();
-        }
-        
-        return true;
-    } catch (error) {
-        console.error('Network switch error:', error);
-        return false;
-    }
-}
-
-// Load network configuration dynamically
-async function loadNetworkConfig(networkName) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = networks[networkName].configUrl + '?v=' + new Date().getTime(); // Cache busting
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Failed to load network config'));
-        document.head.appendChild(script);
-    });
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', async () => {
-    // Load network preference from localStorage
-    const savedNetwork = localStorage.getItem('pepeStakingNetwork') || 'testnet';
-    
-    // Initialize network switcher UI
-    const networkSwitch = document.getElementById('networkSwitch');
-    if (networkSwitch) {
-        // Set initial state based on saved preference
-        networkSwitch.checked = savedNetwork === 'mainnet';
-        
-        // Add event listener
-        networkSwitch.addEventListener('change', async () => {
-            const newNetwork = networkSwitch.checked ? 'mainnet' : 'testnet';
-            await switchNetwork(newNetwork);
-            
-            // Also switch the actual blockchain network in wallet if connected
-            if (window.ethereum && window.ethereum.selectedAddress) {
-                try {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: networks[newNetwork].chainId }]
-                    });
-                } catch (error) {
-                    console.error('Failed to switch chain in wallet:', error);
-                    // Try to add the chain if it doesn't exist
-                    if (error.code === 4902) {
-                        try {
-                            await window.ethereum.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [{
-                                    chainId: networks[newNetwork].chainId,
-                                    chainName: networks[newNetwork].name,
-                                    rpcUrls: [newNetwork === 'mainnet' ? 
-                                        'https://bsc-dataseed.binance.org/' : 
-                                        'https://data-seed-prebsc-1-s1.binance.org:8545/'
-                                    ],
-                                    nativeCurrency: {
-                                        name: 'BNB',
-                                        symbol: 'BNB',
-                                        decimals: 18
-                                    },
-                                    blockExplorerUrls: [newNetwork === 'mainnet' ? 
-                                        'https://bscscan.com' : 
-                                        'https://testnet.bscscan.com'
-                                    ]
-                                }]
-                            });
-                        } catch (addError) {
-                            console.error('Error adding chain:', addError);
-                        }
-                    }
-                }
-            }
+        // Setup UI event handler setelah DOM siap
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setupEventHandlers();
+            this.updateNetworkBadge();
         });
     }
     
-    // Initialize with saved network
-    await switchNetwork(savedNetwork);
-});
+    // Ambil jaringan dari localStorage
+    initFromStorage() {
+        const savedNetwork = localStorage.getItem(this.STORAGE_KEY);
+        if (savedNetwork && (savedNetwork === 'testnet' || savedNetwork === 'mainnet')) {
+            this.currentNetwork = savedNetwork;
+        }
+    }
+    
+    // Setup event handler untuk selector
+    setupEventHandlers() {
+        const selector = document.getElementById('network-selector');
+        if (selector) {
+            selector.value = this.currentNetwork;
+            selector.addEventListener('change', (e) => {
+                this.switchNetwork(e.target.value);
+            });
+        }
+    }
+    
+    // Switch network
+    switchNetwork(network) {
+        if (network !== 'testnet' && network !== 'mainnet') return;
+        
+        this.currentNetwork = network;
+        localStorage.setItem(this.STORAGE_KEY, network);
+        
+        // Update UI
+        this.updateNetworkBadge();
+        
+        // Reload halaman untuk menerapkan perubahan
+        window.location.reload();
+    }
+    
+    // Update tampilan badge network
+    updateNetworkBadge() {
+        const badge = document.getElementById('network-badge');
+        if (badge) {
+            badge.textContent = this.currentNetwork.toUpperCase();
+            badge.className = this.currentNetwork === 'mainnet' 
+                ? 'ml-2 px-2 py-1 bg-green-600 text-white rounded text-xs' 
+                : 'ml-2 px-2 py-1 bg-yellow-500 text-white rounded text-xs';
+        }
+    }
+    
+    // Getter untuk mendapatkan network saat ini
+    getCurrentNetwork() {
+        return this.currentNetwork;
+    }
+    
+    // Getter untuk mendapatkan konfigurasi chain
+    getNetworkConfig() {
+        if (this.currentNetwork === 'mainnet') {
+            return window.BSC_MAINNET_CONFIG || {
+                chainId: '0x38',
+                chainName: 'BSC Mainnet',
+                nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                rpcUrls: ['https://bsc.publicnode.com'],
+                blockExplorerUrls: ['https://bscscan.com']
+            };
+        } else {
+            return window.BSC_CONFIG || {
+                chainId: '0x61',
+                chainName: 'BSC Testnet',
+                nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org:8545'],
+                blockExplorerUrls: ['https://testnet.bscscan.com']
+            };
+        }
+    }
+    
+    // Getter untuk mendapatkan konfigurasi kontrak
+    getContractsConfig() {
+        return this.currentNetwork === 'mainnet' ? window.MAINNET_CONFIG : window.CONFIG;
+    }
+}
+
+// Ini adalah cara yang benar untuk mendeklarasikan variabel global
+window.networkSwitcher = new NetworkSwitcher();

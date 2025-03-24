@@ -2,12 +2,12 @@
 pragma solidity ^0.8.0;
 
 /*
-.______    _______ .______    _______    .___________. __    __  .______    _______     _______.
-|   _  \  |   ____||   _  \  |   ____|   |           ||  |  |  | |   _  \  |   ____|   /       |
-|  |_)  | |  |__   |  |_)  | |  |__      `---|  |----`|  |  |  | |  |_)  | |  |__     |   (----`
-|   ___/  |   __|  |   ___/  |   __|         |  |     |  |  |  | |   _  <  |   __|     \   \    
-|  |      |  |____ |  |      |  |____        |  |     |  `--'  | |  |_)  | |  |____.----)   |   
-| _|      |_______|| _|      |_______|       |__|      \______/  |______/  |_______|_______/    
+______  ______ _____  ______            _______ _    _ ____  ______  _____ 
+|  __ \|  ____|  __ \|  ____|          |__   __| |  | |  _ \|  ____|/ ____|
+| |__) | |__  | |__) | |__     ______     | |  | |  | | |_) | |__  | (___  
+|  ___/|  __| |  ___/|  __|   |______|    | |  | |  | |  _ <|  __|  \___ \ 
+| |    | |____| |    | |____              | |  | |__| | |_) | |____ ____) |
+|_|    |______|_|    |______|             |_|   \____/|____/|______|_____/ 
 */
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -22,6 +22,7 @@ contract BSCPEPEStaking is Ownable, ReentrancyGuard {
     Pool[] public pools;
 
     uint256 public DEFAULT_LOCK_PERIOD = 30 days; // Default lock period
+    uint256 public constant MAX_POOLS = 10; // Define a maximum number of pools
 
     struct Pool {
         uint256 minStakeAmount;
@@ -46,7 +47,6 @@ contract BSCPEPEStaking is Ownable, ReentrancyGuard {
     event RewardTokenSet(address indexed token);
     event LockPeriodUpdated(uint256 newPeriod);
     event PoolLockPeriodUpdated(uint256 indexed poolId, uint256 newPeriod);
-    event TokensRecovered(address token, uint256 amount);
     event UnstakedEarly(address indexed user, uint256 indexed poolId, uint256 amount);
     event PoolCreated(uint256 indexed poolId, uint256 minAmount, uint256 reward);
     event PoolUpdated(uint256 indexed poolId, uint256 reward);
@@ -118,6 +118,7 @@ contract BSCPEPEStaking is Ownable, ReentrancyGuard {
         uint256 lockPeriod, 
         bool isActive
     ) external onlyAdmin {
+        require(pools.length < MAX_POOLS, "Max pool limit reached");
         require(minAmount > 0, "Min amount must be > 0");
         require(maxHolders > 0, "Max holders must be > 0");
         require(reward > 0, "Reward must be > 0");
@@ -181,38 +182,38 @@ contract BSCPEPEStaking is Ownable, ReentrancyGuard {
 
     // UPDATED: Check pool-specific lock period
     function unstake(uint256 stakeIndex) external nonReentrant {
-        require(stakeIndex < userStakes[msg.sender].length, "Invalid stake index");
-        Stake storage userStake = userStakes[msg.sender][stakeIndex];
-        
-        // Check stake status 
-        require(!userStake.hasClaimedReward, "Already unstaked");
-        
-        // Get pool-specific lock period
-        uint256 poolLockPeriod = pools[userStake.poolId].lockPeriod;
-        require(block.timestamp >= userStake.startTime + poolLockPeriod, "Stake is still locked");
-        
-        // Cache values before modifying storage
-        uint256 amount = userStake.amount;
-        uint256 poolId = userStake.poolId;
-        
-        // Update stake record first to prevent reentrancy
-        userStake.hasClaimedReward = true;
-        
-        // Update pool data
-        Pool storage pool = pools[poolId];
-        pool.totalStaked -= amount;
-        pool.currentHolders -= 1;
-        
-        // Transfer tokens only after state changes
-        uint256 reward = pool.rewardPerHolder;
-        bool pepeSuccess = pepeToken.transfer(msg.sender, amount);
-        require(pepeSuccess, "PEPE transfer failed");
-        
-        bool rewardSuccess = rewardToken.transfer(msg.sender, reward);
-        require(rewardSuccess, "Reward transfer failed");
+    require(stakeIndex < userStakes[msg.sender].length, "Invalid stake index");
+    Stake storage userStake = userStakes[msg.sender][stakeIndex];
+    
+    // Check stake status 
+    require(!userStake.hasClaimedReward, "Already unstaked");
+    
+    // Get pool-specific lock period
+    uint256 poolLockPeriod = pools[userStake.poolId].lockPeriod;
+    require(block.timestamp >= userStake.startTime + poolLockPeriod, "Stake is still locked");
+    
+    // Cache values before modifying storage
+    uint256 amount = userStake.amount;
+    uint256 poolId = userStake.poolId;
+    
+    // Update stake record first to prevent reentrancy
+    userStake.hasClaimedReward = true;
+    
+    // Update pool data
+    Pool storage pool = pools[poolId];
+    pool.totalStaked -= amount;
+    pool.currentHolders -= 1;
+    
+    // Transfer tokens only after state changes
+    uint256 reward = pool.rewardPerHolder;
+    bool pepeSuccess = pepeToken.transfer(msg.sender, amount);
+    require(pepeSuccess, "PEPE transfer failed");
+    
+    bool rewardSuccess = rewardToken.transfer(msg.sender, reward);
+    require(rewardSuccess, "Reward transfer failed");
 
-        emit Unstaked(msg.sender, poolId, amount, reward);
-    }
+    emit Unstaked(msg.sender, poolId, amount, reward);
+}
 
     function unstakeEarly(uint256 stakeIndex) external nonReentrant {
         require(stakeIndex < userStakes[msg.sender].length, "Invalid stake index");
@@ -253,16 +254,6 @@ contract BSCPEPEStaking is Ownable, ReentrancyGuard {
 
     function getAllPoolsInfo() external view returns (Pool[] memory) {
         return pools;
-    }
-
-    function recoverTokens(address token, uint256 amount) external onlyOwner {
-        require(amount > 0, "Amount must be > 0");
-        require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient balance");
-        
-        bool success = IERC20(token).transfer(msg.sender, amount);
-        require(success, "Token transfer failed");
-        
-        emit TokensRecovered(token, amount);
     }
 
     function addUSDT(uint256 amount) external onlyAdmin {

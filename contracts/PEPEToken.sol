@@ -14,11 +14,14 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract PEPEToken is ERC20, Ownable {
-    constructor() ERC20("PEPE Token", "PEPE") Ownable(msg.sender) {
-        _mint(msg.sender, 100_000_000_000 * 10 ** decimals()); // 100 Billion PEPE
-    }
+    uint256 private constant MAX_SUPPLY = 100_000_000_000 * 10**18;
 
-    function burn(uint256 amount) external {
-        _burn(msg.sender, amount);
+    constructor() ERC20("PEPE", "PEPE") Ownable(msg.sender) {
+        _mint(msg.sender, MAX_SUPPLY);
+    }
+    
+    // View function to get max supply
+    function getMaxSupply() external pure returns (uint256) {
+        return MAX_SUPPLY;
     }
 }

@@ -2,7 +2,7 @@
 const contractAddresses = {
     pepeToken: "0x578a700c214AF091d377f942c15A2413306006bc", // Updated address
     dummyUSDT: "0xafFED4B10C3Dc1822bD992F56Dae9F6aBb8E0244", // Updated address
-    pepeStaking: "0x146a5B9aACB92aE9F39507AE62e5Dd1C2a07df23" // New staking contract address
+    pepeStaking: "0x808874626317e75Df7f495a3f3e7617B6c26073B" // New staking contract address
 };
 
 // Contract ABIs

@@ -572,32 +572,151 @@ async function updateActiveStakes() {
     }
 }
 
-// Fungsi untuk menambah USDT ke kontrak
-async function addUsdtToContract() {
+// FUNGSI ADD USDT DENGAN MODAL - GUNAKAN HANYA FUNGSI INI
+// Fungsi untuk membuka modal Add USDT
+function openUsdtModal() {
+    if (window.isProcessingUSDT) {
+        console.log("USDT process already running, please wait...");
+        return;
+    }
+    
+    const modal = document.getElementById('addUsdtModal');
+    if (!modal) return;
+    
+    // Reset form
+    document.getElementById('usdtAmount').value = '';
+    
+    // Tampilkan modal
+    modal.classList.remove('hidden');
+    
+    // Fokus ke input
+    setTimeout(() => {
+        document.getElementById('usdtAmount').focus();
+    }, 100);
+    
+    // Pastikan hanya ada satu event handler untuk konfirmasi
+    const confirmBtn = document.getElementById('confirmAddUsdt');
+    confirmBtn.onclick = null; // Hapus event handler lama jika ada
+    confirmBtn.onclick = processAddUsdt; // Tambahkan event handler baru
+}
+
+// Fungsi untuk menutup modal Add USDT
+function closeUsdtModal() {
+    const modal = document.getElementById('addUsdtModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Fungsi untuk memproses Add USDT dari form modal
+async function processAddUsdt() {
+    // Prevent double processing
+    if (window.isProcessingUSDT) {
+        console.log("USDT process already running, please wait...");
+        return;
+    }
+    
+    window.isProcessingUSDT = true;
+    
     try {
-        const amount = prompt("Enter USDT amount to add:");
-        if (!amount) return;
+        const amount = document.getElementById('usdtAmount').value;
+        if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+            showNotification('Please enter a valid amount', true);
+            window.isProcessingUSDT = false;
+            return;
+        }
+        
+        // Tutup modal sebelum memproses transaksi
+        closeUsdtModal();
         
         const usdtAmount = ethers.utils.parseEther(amount);
+        
+        // Tampilkan loading notification
+        showNotification('Processing USDT transfer, please wait...');
+        
         const usdtContract = new ethers.Contract(
             CONFIG.dummyUSDT.address,
             CONFIG.dummyUSDT.abi,
             signer
         );
         
-        // Approve first
-        const approveTx = await usdtContract.approve(stakingContract.address, usdtAmount);
+        // Simpan saldo awal untuk verifikasi
+        const beforeBalance = await usdtContract.balanceOf(CONFIG.pepeStaking.address);
+        console.log(`Contract USDT balance before: ${ethers.utils.formatEther(beforeBalance)}`);
+        
+        // Check USDT balance
+        const userBalance = await usdtContract.balanceOf(userAddress);
+        if (userBalance.lt(usdtAmount)) {
+            showNotification('Insufficient USDT balance', true);
+            window.isProcessingUSDT = false;
+            return;
+        }
+        
+        // Approve USDT transfer
+        showNotification('Approving USDT transfer, please confirm in wallet...');
+        const approveTx = await usdtContract.approve(
+            CONFIG.pepeStaking.address, 
+            usdtAmount,
+            { gasLimit: 100000 }
+        );
+        
         await approveTx.wait();
+        console.log('USDT approved:', approveTx.hash);
         
-        // Add USDT to contract
-        const tx = await stakingContract.addUSDT(usdtAmount);
-        await tx.wait();
+        // Add delay before next transaction
+        showNotification('Approval confirmed, processing transfer...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        showNotification('Successfully added USDT to contract');
-        updateUI();
+        // Transfer USDT to contract
+        const addTx = await stakingContract.addUSDT(
+            usdtAmount, 
+            { gasLimit: 200000 }
+        );
+        
+        showNotification('Transfer sent, waiting for confirmation...');
+        
+        try {
+            const receipt = await addTx.wait();
+            
+            if (receipt.status === 1) {
+                showNotification('USDT successfully added to contract!');
+            } else {
+                // Periksa apakah transfer berhasil meskipun ada error
+                await verifyUsdtTransfer(usdtContract, CONFIG.pepeStaking.address, beforeBalance);
+            }
+        } catch (error) {
+            console.error('Transfer receipt error:', error);
+            await verifyUsdtTransfer(usdtContract, CONFIG.pepeStaking.address, beforeBalance);
+        }
+        
+        // Update UI
+        await updateContractBalance();
+        
     } catch (error) {
         console.error('Error adding USDT:', error);
-        showNotification(error.message, true);
+        showNotification(`Error: ${error.message}`, true);
+    } finally {
+        window.isProcessingUSDT = false;
+    }
+}
+
+// Helper function untuk verifikasi transfer USDT
+async function verifyUsdtTransfer(usdtContract, contractAddress, previousBalance) {
+    try {
+        // Wait untuk memastikan blockchain state terupdate
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const currentBalance = await usdtContract.balanceOf(contractAddress);
+        
+        if (currentBalance.gt(previousBalance)) {
+            showNotification('USDT transfer successful despite transaction error');
+            return true;
+        } else {
+            showNotification('USDT transfer failed. Please try again.', true);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error verifying transfer:', error);
+        showNotification('Could not verify transfer. Please check contract balance.', true);
+        return false;
     }
 }
 
@@ -773,7 +892,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Other buttons
     const addUsdtButton = document.getElementById('addUsdtButton');
     if (addUsdtButton) {
-        addUsdtButton.addEventListener('click', addUsdtToContract);
+        // PENTING: PASTIKAN HANYA MENGGUNAKAN openUsdtModal
+        addUsdtButton.addEventListener('click', openUsdtModal);
     }
 
     const setAdminButton = document.getElementById('setAdminButton');
@@ -978,12 +1098,6 @@ async function updateLockPeriodDisplay() {
         console.error('Error updating lock period display:', error);
     }
 }
-
-// Add to existing DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    // ...existing code...
-    updateLockPeriodDisplay(); // Add this line
-});
 
 // Add after other helper functions
 function safeUpdateElement(id, value) {
@@ -1226,16 +1340,6 @@ async function updatePoolReward() {
     }
 }
 
-// Extend connect wallet to also initialize pool lock period display
-async function connectWallet() {
-    // ...existing code...
-    
-    // After successful connection, also update pool lock periods
-    if (userAddress) {
-        await updatePoolLockPeriods();
-    }
-}
-
 // Extend updateUI to also update pool lock periods
 async function updateUI() {
     // ...existing code...
@@ -1310,90 +1414,6 @@ async function updateStakingPeriodDisplay() {
     }
 }
 
-// Perbarui fungsi connectWallet untuk memanggil updateStakingPeriodDisplay
-window.connectWallet = async function() {
-    console.log("window.connectWallet called - processing connection");
-    
-    try {
-        if (typeof window.ethereum === 'undefined') {
-            console.error('MetaMask tidak terdeteksi!');
-            showNotification('MetaMask diperlukan untuk menggunakan aplikasi ini', true);
-            return;
-        }
-        
-        // Inisialisasi provider dan signer
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        console.log('Provider initialized:', provider);
-        
-        signer = provider.getSigner();
-        console.log('Signer initialized');
-        
-        userAddress = await signer.getAddress();
-        console.log('Connected address:', userAddress);
-
-        // Initialize contracts
-        stakingContract = new ethers.Contract(
-            CONFIG.pepeStaking.address,
-            CONFIG.pepeStaking.abi,
-            signer
-        );
-        console.log('Staking contract initialized:', CONFIG.pepeStaking.address);
-
-        // Check if connected wallet is admin or owner
-        try {
-            const [isAdmin, owner] = await Promise.all([
-                stakingContract.isAdmin(userAddress),
-                stakingContract.owner()
-            ]);
-            
-            console.log('Is admin:', isAdmin);
-            console.log('Owner address:', owner);
-            console.log('User address:', userAddress);
-
-            if (!isAdmin && owner.toLowerCase() !== userAddress.toLowerCase()) {
-                showNotification('Akses ditolak: Bukan admin atau owner', true);
-                return;
-            }
-        } catch (accessError) {
-            console.error('Error checking admin status:', accessError);
-            showNotification('Gagal memeriksa status admin', true);
-            return;
-        }
-
-        // Update UI
-        await updateUI();
-        
-        // TAMBAHKAN: Langsung update stakingPeriod setelah connect
-        await updateStakingPeriodDisplay();
-        showNotification('Admin berhasil terhubung!');
-
-        // Mulai auto-refresh
-        startAutoRefresh();
-        
-        // Update stake displays
-        await updateActiveStakes();
-        setInterval(updateActiveStakes, 10000);
-        
-        // Update lock period display - TAMBAHKAN PENGECEKAN
-        try {
-            await updateLockPeriodDisplay();
-        } catch (displayError) {
-            console.log('Non-critical error updating lock display:', displayError.message);
-        }
-        
-        // Update pool lock periods - TAMBAHKAN PENGECEKAN
-        try {
-            await updatePoolLockPeriods();
-        } catch (periodsError) {
-            console.log('Non-critical error updating pool periods:', periodsError.message);
-        }
-        
-    } catch (error) {
-        console.error('Connection error:', error);
-        showNotification('Gagal terhubung: ' + error.message, true);
-    }
-};
-
 // Perbarui fungsi startAutoRefresh untuk memanggil updateStakingPeriodDisplay
 function startAutoRefresh() {
     // Initial load with retry logic
@@ -1445,25 +1465,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ...existing code...
 });
 
-// Jika ada tombol reset, tambahkan update stakingPeriod ke script debugging
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("DOM fully loaded and parsed");
-    
-    // ...existing code...
-    
-    // Tambahkan tombol refresh lock period di navbar
-    const navContainer = document.querySelector('nav .container');
-    if (navContainer) {
-        const refreshLockBtn = document.createElement('button');
-        refreshLockBtn.className = 'ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-xs hover:bg-blue-700';
-        refreshLockBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh Lock Period';
-        refreshLockBtn.onclick = updateStakingPeriodDisplay;
-        navContainer.appendChild(refreshLockBtn);
-    }
-    
-    // ...existing code...
-});
-
 // Update dropdown label to reflect actual functionality
 document.addEventListener('DOMContentLoaded', function() {
     // ...existing code...
@@ -1506,5 +1507,3 @@ async function addNewAdmin() {
         showNotification(error.message, true);
     }
 }
-
-// ...existing code...

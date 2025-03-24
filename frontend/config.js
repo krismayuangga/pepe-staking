@@ -19,7 +19,7 @@ const CONFIG = {
             "function transfer(address to, uint256 amount) returns (bool)",
             "function decimals() view returns (uint8)"
         ],
-        BSC_PEPE_STAKING: '0x437A1feC1770f5BB07F9DD89a0Ca0739a018BD85',
+        BSC_PEPE_STAKING: '0x808874626317e75Df7f495a3f3e7617B6c26073B',
         BSC_PEPE_STAKING_ABI: [
             "function stake(uint256 poolId, uint256 amount)",
             "function unstake(uint256 stakeIndex)",
